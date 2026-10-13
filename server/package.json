@@ -1,0 +1,27 @@
+{
+  "name": "quiz-meister-server",
+  "private": true,
+  "version": "0.0.0",
+  "description": "Backend for QuizMeister",
+  "license": "ISC",
+  "author": "Szafruga Software",
+  "type": "module",
+  "main": "app.ts",
+  "engines": {
+    "node": ">=22.18.0"
+  },
+  "scripts": {
+    "dev": "node --watch app.ts",
+    "start": "node app.ts",
+    "typecheck": "tsc"
+  },
+  "dependencies": {
+    "express": "^5.3.0",
+    "socket.io": "^4.8.4"
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.6",
+    "@types/node": "^24.13.3",
+    "typescript": "^7.0.2"
+  }
+}
