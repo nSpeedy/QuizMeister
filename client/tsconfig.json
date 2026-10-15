@@ -1,7 +1,36 @@
 {
-  "files": [],
-  "references": [
-    { "path": "./tsconfig.app.json"},
-    { "path": "./tsconfig.node.json"}
-  ]
+  "include": [
+    "src",
+    "vite.config.ts",
+    "react-router.config.ts",
+    ".react-router/types/**/*"
+  ],
+  "compilerOptions": {
+    "target": "es2023",
+    "lib": ["ES2023", "DOM", "DOM.Iterable"],
+    "types": ["node", "vite/client"],
+    "skipLibCheck": true,
+
+    /* Bundler mode */
+    "module": "esnext",
+    "moduleResolution": "bundler",
+    "allowImportingTsExtensions": true,
+    "allowArbitraryExtensions": true,
+    "verbatimModuleSyntax": true,
+    "moduleDetection": "force",
+    "noEmit": true,
+    "jsx": "react-jsx",
+
+    /* React Router typegen (import type { Route } from './+types/...') */
+    "rootDirs": [".", "./.react-router/types"],
+    "paths": {
+      "@/*": ["./src/*"]
+    },
+
+    /* Linting */
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "erasableSyntaxOnly": true,
+    "noFallthroughCasesInSwitch": true
+  }
 }

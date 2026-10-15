@@ -5,7 +5,8 @@ import {
 import { flatRoutes } from "@react-router/fs-routes";
 
 export default [
-    route("/", "./home.tsx"),
+    route("/", "./routes/home.tsx"),
 
-    ...(await flatRoutes()),
+    // home.tsx jest zdefiniowany wyżej, więc flatRoutes go pomija
+    ...(await flatRoutes({ ignoredRouteFiles: ["**/routes/home.tsx"] })),
 ] satisfies RouteConfig;

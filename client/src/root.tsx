@@ -1,7 +1,10 @@
 import type { ReactNode } from 'react'
 import { isRouteErrorResponse, Links, Meta, Outlet, Scripts, ScrollRestoration } from 'react-router'
 import type { Route } from './+types/root'
+import 'bootstrap/dist/css/bootstrap.min.css'
 import './assets/globals.css'
+import Navbar from '@/components/Navbar.tsx'
+import Footer from "@/components/footer.tsx";
 
 export function Layout({ children }: { children: ReactNode }) {
     return (
@@ -24,7 +27,15 @@ export function Layout({ children }: { children: ReactNode }) {
 }
 
 export default function App() {
-    return <Outlet />
+    return (
+        <div className="d-flex flex-column min-vh-100">
+            <Navbar />
+            <main className="container-fluid py-3 flex-grow-1">
+                <Outlet />
+            </main>
+            <Footer />
+        </div>
+    )
 }
 
 export function HydrateFallback() {
