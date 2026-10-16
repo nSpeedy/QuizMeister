@@ -1,6 +1,10 @@
 import type { Player } from "./player.ts";
 
 export interface Lobby {
-    id: number;
+    code: string;
+    quizId: number;
+    hostUserId: number;
+    hostSocketId: string;
+    phase: 'waiting' | 'playing' | 'finished';
     players: Player[];
 }
