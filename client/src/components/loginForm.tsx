@@ -1,13 +1,17 @@
 function LoginForm(){
+    function handleSubmit(formData: FormData){
+        const login = formData.get("login") ?? "";
+        const password = formData.get("password") ?? "";
+    }
     return (<>
-            <form>
+            <form action={handleSubmit} method="POST">
                 <div className="mb-3">
                     <label htmlFor="InputLogin" className="form-label">Login</label>
-                    <input type="text" className="form-control" id="InputLogin"/>
+                    <input type="text" name="login" className="form-control" id="InputLogin"/>
                 </div>
                 <div className="mb-3">
                     <label htmlFor="InputPassword" className="form-label">Password</label>
-                    <input type="password" className="form-control" id="InputPassword"/>
+                    <input type="password" name="password" className="form-control" id="InputPassword"/>
                 </div>
                 <button type="submit" className="btn btn-primary">Login</button>
             </form>
