@@ -97,7 +97,10 @@ function emitLobby(io: Emitter, game: Game) {
 
 const connectedPlayers = (game: Game) => [...game.players.values()].filter((p) => p.socketId !== null);
 
-const everyoneAnswered = (game: Game) => connectedPlayers(game).every((p) => p.answers[game.current]);
+function everyoneAnswered(game: Game) {
+    const connected = connectedPlayers(game);
+    return connected.length > 0 && connected.every((p) => p.answers[game.current]);
+}
 
 function rankPlayers(game: Game) {
     const sorted = [...game.players.values()].sort((a, b) => b.score - a.score);
@@ -209,7 +212,10 @@ export function disconnectPlayer(io: Emitter, game: Game, player: PlayerState, l
             emitLobby(io, game);
         }, RECONNECT_GRACE_MS);
     } else if (connectedPlayers(game).length === 0) {
-        return closeGame(io, game, 'no_players');
+        clearTimeout(game.idleTimer);
+        game.idleTimer = setTimeout(() => {
+            if (games.has(game.code) && connectedPlayers(game).length === 0) closeGame(io, game, 'no_players');
+        }, RECONNECT_GRACE_MS);
     }
 
     emitLobby(io, game);
@@ -223,7 +229,11 @@ export function snapshot(game: Game, player: PlayerState) {
         phase: game.phase,
         questionIndex: game.current,
         total: game.questions.length,
-        question: q && { optionCount: q.options.length, endsAt: game.questionEndsAt },
+        question: q && {
+            optionCount: q.options.length,
+            durationMs: q.timeLimitS * 1000,
+            remainingMs: Math.max(0, game.questionEndsAt - Date.now()),
+        },
         you: { id: player.id, name: player.name, score: player.score, answered: !!player.answers[game.current] },
     };
 }
@@ -273,6 +283,7 @@ export function buildStats(game: Game) {
 
 function dispose(io: Emitter, game: Game) {
     clearTimeout(game.timer);
+    clearTimeout(game.idleTimer);
     for (const p of game.players.values()) clearTimeout(p.removeTimer);
     game.phase = 'finished';
     io.in(game.code).socketsLeave([game.code, hostRoom(game), playersRoom(game)]);

@@ -142,10 +142,24 @@ test('gracz rozłączony w poczekalni ma czas na powrót', (t) => {
     assert.equal(game.players.has(bob.token), false);
 });
 
-test('ostatni rozłączony gracz zamyka grę', (t) => {
+test('odświeżenie strony przez wszystkich graczy nie kończy pytania ani gry', (t) => {
+    const { io, game, alice, bob } = setup(t);
+    disconnectPlayer(io, game, alice, false);
+    disconnectPlayer(io, game, bob, false);
+    assert.equal(game.phase, 'question');
+
+    t.mock.timers.tick(1_000);
+    attachPlayer(io, game, alice, 's-alice-2');
+    assert.equal(submitAnswer(io, game, alice, 0, 1), null);
+    t.mock.timers.tick(RECONNECT_GRACE_MS);
+    assert.equal(games.has(game.code), true);
+});
+
+test('gra bez graczy zamyka się po czasie na powrót', (t) => {
     const { io, last, game, alice, bob } = setup(t);
     disconnectPlayer(io, game, alice, false);
     disconnectPlayer(io, game, bob, false);
+    t.mock.timers.tick(RECONNECT_GRACE_MS);
     assert.deepEqual(last('game:closed'), { reason: 'no_players' });
     assert.equal(games.has(game.code), false);
 });

@@ -31,5 +31,6 @@ export interface Game {
     questionEndsAt: number;
     players: Map<string, PlayerState>;
     timer?: NodeJS.Timeout;
+    idleTimer?: NodeJS.Timeout;
     startedAt?: number;
 }

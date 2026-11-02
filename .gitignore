@@ -32,3 +32,4 @@ Thumbs.db
 # Editors (JetBrains: .idea/.gitignore handles per-user files)
 .vscode/*
 !.vscode/extensions.json
+MCH.md

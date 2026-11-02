@@ -1,0 +1,234 @@
+:root {
+    --qm-red: #d64545;
+    --qm-blue: #2f6fdb;
+    --qm-yellow: #d99a00;
+    --qm-green: #2e9e5b;
+    --qm-surface: #f4f5f8;
+}
+
+body {
+    background: var(--qm-surface);
+}
+
+.answer-red { background: var(--qm-red); }
+.answer-blue { background: var(--qm-blue); }
+.answer-yellow { background: var(--qm-yellow); }
+.answer-green { background: var(--qm-green); }
+
+.answer-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.75rem;
+}
+
+.answer-tile {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    min-height: 5rem;
+    padding: 1rem 1.25rem;
+    border: 0;
+    border-radius: 0.75rem;
+    color: #fff;
+    font-size: clamp(1.1rem, 2.4vw, 1.75rem);
+    font-weight: 600;
+    text-align: left;
+    box-shadow: 0 4px 0 rgba(0, 0, 0, 0.18);
+    transition: opacity 0.2s, transform 0.1s;
+}
+
+button.answer-tile:active:not(:disabled) {
+    transform: translateY(2px);
+    box-shadow: 0 2px 0 rgba(0, 0, 0, 0.18);
+}
+
+.answer-symbol {
+    font-size: 1.6em;
+    line-height: 1;
+}
+
+.answer-text {
+    overflow-wrap: anywhere;
+}
+
+.answer-wrong {
+    opacity: 0.3;
+}
+
+.answer-correct {
+    outline: 4px solid #1b1b1b;
+    outline-offset: 3px;
+}
+
+.player-answers {
+    height: calc(100vh - 16rem);
+    min-height: 18rem;
+}
+
+.player-answers .answer-tile {
+    justify-content: center;
+    min-height: 0;
+    height: 100%;
+}
+
+.player-answers .answer-symbol {
+    font-size: clamp(3rem, 12vw, 6rem);
+}
+
+.pin-display {
+    font-size: clamp(3rem, 12vw, 7rem);
+    font-weight: 800;
+    letter-spacing: 0.15em;
+    font-variant-numeric: tabular-nums;
+    line-height: 1;
+}
+
+.question-text {
+    font-size: clamp(1.5rem, 3.5vw, 2.75rem);
+    font-weight: 700;
+    text-align: center;
+}
+
+.countdown {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.countdown-value {
+    min-width: 3ch;
+    font-size: 2rem;
+    font-weight: 800;
+    font-variant-numeric: tabular-nums;
+    text-align: center;
+}
+
+.countdown-bar {
+    flex-grow: 1;
+    height: 0.75rem;
+}
+
+.countdown-bar .progress-bar {
+    transition: width 0.2s linear;
+}
+
+.player-chip {
+    display: inline-block;
+    padding: 0.4rem 0.9rem;
+    border-radius: 999px;
+    background: #fff;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
+    font-weight: 600;
+}
+
+.player-chip.offline {
+    opacity: 0.45;
+}
+
+.leaderboard-row {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.6rem 0.9rem;
+    margin-bottom: 0.4rem;
+    border-radius: 0.5rem;
+    background: #fff;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+}
+
+.leaderboard-me {
+    outline: 2px solid var(--qm-blue);
+}
+
+.leaderboard-rank {
+    width: 2ch;
+    font-weight: 800;
+    color: #6c757d;
+}
+
+.leaderboard-name {
+    flex-grow: 1;
+    font-weight: 600;
+    overflow-wrap: anywhere;
+}
+
+.leaderboard-score {
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+}
+
+.stat-row {
+    display: grid;
+    grid-template-columns: 1.75rem minmax(0, 12rem) 1fr 3.5rem;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.2rem 0;
+}
+
+.stat-correct .stat-label {
+    font-weight: 700;
+}
+
+.stat-correct .stat-label::after {
+    content: ' ✓';
+    color: var(--qm-green);
+}
+
+.stat-symbol {
+    display: inline-flex;
+    justify-content: center;
+    align-items: center;
+    width: 1.75rem;
+    height: 1.75rem;
+    border-radius: 0.35rem;
+    color: #fff;
+    font-size: 0.85rem;
+}
+
+.stat-label {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.stat-bar {
+    height: 0.75rem;
+    border-radius: 999px;
+    background: #e5e7eb;
+    overflow: hidden;
+}
+
+.stat-fill {
+    height: 100%;
+}
+
+.stat-value {
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+}
+
+.answer-chosen {
+    display: inline-flex;
+    justify-content: center;
+    align-items: center;
+    width: 6rem;
+    height: 6rem;
+    border-radius: 1rem;
+    color: #fff;
+    font-size: 3rem;
+}
+
+.result-icon {
+    font-size: clamp(4rem, 18vw, 7rem);
+    line-height: 1;
+}
+
+@media (max-width: 575.98px) {
+    .stat-row {
+        grid-template-columns: 1.75rem minmax(0, 1fr) 3.5rem;
+    }
+
+    .stat-bar {
+        display: none;
+    }
+}

@@ -37,6 +37,7 @@ function QuizRow({ quiz }: { quiz: Quiz }) {
             <Link to={`/admin/quizzes/${quiz.id}`} className="flex-grow-1 text-decoration-none fw-semibold">{quiz.title}</Link>
             {quiz.is_public && <span className="badge text-bg-success">public</span>}
             {fetcher.data?.error && <span className="text-danger small">{fetcher.data.error}</span>}
+            <Link to={`/host/${quiz.id}`} className="btn btn-sm btn-success">Host game</Link>
             <Link to={`/admin/quizzes/${quiz.id}`} className="btn btn-sm btn-outline-primary">Edit</Link>
             <fetcher.Form method="post" onSubmit={(e) => { if (!confirm(`Delete "${quiz.title}"?`)) e.preventDefault(); }}>
                 <input type="hidden" name="intent" value="delete"/>
