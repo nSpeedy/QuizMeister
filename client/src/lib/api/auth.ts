@@ -24,12 +24,22 @@ export async function requireUser(request: Request): Promise<User> {
     return user;
 }
 
-export async function login(username: string, password: string) {
-    await apiRequest<User>('/api/v1/auth/login', {
+export async function login(username: string, password: string): Promise<User> {
+    const user = await apiRequest<User>('/api/v1/auth/login', {
         method: 'POST',
         body: JSON.stringify({ username, password }),
     });
-    resetUser();
+    userPromise = Promise.resolve(user);
+    return user;
+}
+
+export async function register(username: string, password: string): Promise<User> {
+    const user = await apiRequest<User>('/api/v1/auth/register', {
+        method: 'POST',
+        body: JSON.stringify({ username, password }),
+    });
+    userPromise = Promise.resolve(user);
+    return user;
 }
 
 export async function logout() {

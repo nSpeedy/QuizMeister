@@ -1,7 +1,7 @@
 import type { Request, Response, NextFunction } from 'express';
 import * as usersRepo from '../repo/users.ts';
 
-function readToken(req: Request): string | undefined {
+export function readToken(req: Request): string | undefined {
     const header = req.get('authorization');
     if (header?.startsWith('Bearer ')) return header.slice(7).trim();
     return req.cookies?.session;
