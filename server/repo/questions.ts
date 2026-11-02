@@ -12,6 +12,10 @@ export function getAllByQuiz(quiz_id: number): Question[] {
     return db.prepare<[number], QuestionRow>(`SELECT ${COLUMNS} FROM questions WHERE quiz_id = ? ORDER BY position`).all(quiz_id).map(toQuestion);
 }
 
+export function countByQuiz(quiz_id: number): number {
+    return db.prepare<[number], { n: number }>('SELECT COUNT(*) AS n FROM questions WHERE quiz_id = ?').get(quiz_id)!.n;
+}
+
 export function create(quiz_id: number, q: QuestionInput): Question {
     const row = db.prepare<[number, number, string, string, number, number], QuestionRow>(`
         INSERT INTO questions (quiz_id, position, text, options, correct_index, time_limit_s)

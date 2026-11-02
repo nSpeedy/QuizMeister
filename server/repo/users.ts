@@ -1,7 +1,7 @@
 import { randomBytes } from 'node:crypto';
 import { db } from '../lib/db.ts';
 
-export const SESSION_MS = 7 * 24 * 60 * 60 * 1000; // 7 dni
+export const SESSION_MS = 7 * 24 * 60 * 60 * 1000;
 
 export function createUser(username: string, password_hash: string): number {
     return Number(db.prepare('INSERT INTO users (username, password_hash) VALUES (?, ?)').run(username, password_hash).lastInsertRowid);

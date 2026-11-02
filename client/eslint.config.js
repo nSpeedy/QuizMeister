@@ -19,4 +19,12 @@ export default defineConfig([
       globals: globals.browser,
     },
   },
+  {
+    files: ['src/routes/**/*.tsx', 'src/root.tsx'],
+    rules: {
+      'react-refresh/only-export-components': ['error', {
+        allowExportNames: ['clientLoader', 'clientAction', 'loader', 'action', 'meta', 'links', 'headers', 'handle', 'shouldRevalidate'],
+      }],
+    },
+  },
 ])

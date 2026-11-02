@@ -8,6 +8,10 @@ export function getAllByOwner(owner_id: number): Quiz[] {
     return db.prepare<[number], QuizRow>('SELECT * FROM quizzes WHERE owner_id = ? ORDER BY id DESC').all(owner_id).map(toQuiz);
 }
 
+export function countByOwner(owner_id: number): number {
+    return db.prepare<[number], { n: number }>('SELECT COUNT(*) AS n FROM quizzes WHERE owner_id = ?').get(owner_id)!.n;
+}
+
 export function get(id: number, owner_id: number): Quiz | undefined {
     const row = db.prepare<[number, number], QuizRow>('SELECT * FROM quizzes WHERE id = ? AND owner_id = ?').get(id, owner_id);
     return row && toQuiz(row);

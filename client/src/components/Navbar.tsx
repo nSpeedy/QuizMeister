@@ -4,6 +4,7 @@ import { Link, NavLink } from 'react-router';
 const links = [
     { to: '/', label: 'Home' },
     { to: '/lobby', label: 'Lobby' },
+    { to: '/admin', label: 'Admin' },
 ];
 
 function Navbar() {
@@ -21,7 +22,7 @@ function Navbar() {
                 <div className={`collapse navbar-collapse${open ? ' show' : ''}`} id="mainNavbar">
                     <div className="navbar-nav ms-auto">
                         {links.map(({ to, label }) => (
-                            <NavLink key={to} className="nav-link" to={to} end
+                            <NavLink key={to} className="nav-link" to={to} end={to === '/'}
                                      onClick={() => setOpen(false)}>
                                 {label}
                             </NavLink>

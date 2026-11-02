@@ -12,5 +12,9 @@ export interface Quiz {
     owner_id: number;
     title: string;
     is_public: boolean;
-    Questions: Question[];
 }
+export interface QuizWithQuestions extends Quiz {
+    questions: Question[];
+}
+export type QuizInput = Pick<Quiz, 'title' | 'is_public'>;
+export type QuestionInput = Pick<Question, 'text' | 'options' | 'correctIndex' | 'timeLimitS'>;

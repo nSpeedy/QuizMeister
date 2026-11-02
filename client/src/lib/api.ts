@@ -35,3 +35,12 @@ export default async function apiRequest<T>(path: string, options: RequestInit =
     }
     return data as T;
 }
+export function errorMessage(e: unknown): string {
+    if (e instanceof ApiError) {
+        const body = e.body as { error?: unknown } | undefined;
+        if (typeof body?.error === 'string') return body.error;
+        if (e.status === 401) return 'Your session has expired, log in again';
+        return `Request failed (${e.status})`;
+    }
+    return 'Network error, try again';
+}

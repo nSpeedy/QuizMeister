@@ -2,6 +2,7 @@ import { Router } from 'express';
 import * as quizzesRepo from '../repo/quizzes.ts';
 import * as questionsRepo from '../repo/questions.ts';
 import type { QuestionInput } from '../repo/questions.ts';
+import { LIMITS } from '../lib/limits.ts';
 
 const router = Router({ mergeParams: true });
 
@@ -13,14 +14,19 @@ router.use((req, res, next) => {
 });
 
 function parseQuestion(body: any): QuestionInput | string {
-    const { text, options, correctIndex, timeLimit: timeLimit = 20 } = body ?? {};
-    if (typeof text !== 'string' || !text.trim()) return 'text is required';
-    if (!Array.isArray(options) || options.length < 2 || !options.every(o => typeof o === 'string' && o.trim()))
-        return 'options must be an array of at least 2 non-empty strings';
-    if (!Number.isInteger(correctIndex) || correctIndex < 0 || correctIndex >= options.length)
-        return 'correctIndex must point to one of the options';
-    if (!Number.isInteger(timeLimit) || timeLimit <= 0) return 'timeLimitS must be a positive integer';
-    return { text, options, correctIndex, timeLimitS: timeLimit };
+    const { text, options, correctIndex, timeLimitS = 20 } = body ?? {};
+    if (typeof text !== 'string' || !text.trim()) return 'Question text is required';
+    if (text.trim().length > LIMITS.questionTextMax) return `Question text can be at most ${LIMITS.questionTextMax} characters`;
+    if (!Array.isArray(options) || options.length < LIMITS.optionsMin || options.length > LIMITS.optionsMax)
+        return `A question needs ${LIMITS.optionsMin} to ${LIMITS.optionsMax} answers`;
+    if (!options.every((o) => typeof o === 'string' && o.trim())) return 'Answers cannot be empty';
+    const trimmed = options.map((o: string) => o.trim());
+    if (trimmed.some((o) => o.length > LIMITS.optionTextMax)) return `Each answer can be at most ${LIMITS.optionTextMax} characters`;
+    if (new Set(trimmed.map((o) => o.toLowerCase())).size !== trimmed.length) return 'Answers must be different';
+    if (!Number.isInteger(correctIndex) || correctIndex < 0 || correctIndex >= trimmed.length) return 'Mark exactly one correct answer';
+    if (!Number.isInteger(timeLimitS) || timeLimitS < LIMITS.timeLimitMinS || timeLimitS > LIMITS.timeLimitMaxS)
+        return `Time limit must be between ${LIMITS.timeLimitMinS} and ${LIMITS.timeLimitMaxS} seconds`;
+    return { text: text.trim(), options: trimmed, correctIndex, timeLimitS };
 }
 
 router.get('/', (_req, res) => {
@@ -30,6 +36,9 @@ router.get('/', (_req, res) => {
 router.post('/', (req, res) => {
     const input = parseQuestion(req.body);
     if (typeof input === 'string') { res.status(400).json({ error: input }); return; }
+    if (questionsRepo.countByQuiz(res.locals.quizId) >= LIMITS.questionsPerQuiz) {
+        res.status(400).json({ error: `A quiz can have at most ${LIMITS.questionsPerQuiz} questions` }); return;
+    }
     res.status(201).json(questionsRepo.create(res.locals.quizId, input));
 });
 
