@@ -21,16 +21,20 @@ export interface PlayerState {
 
 export interface Game {
     code: string;
+    quizId: number;
     quizTitle: string;
     hostUserId: number;
     hostSocketId: string | null;
-    phase: 'waiting' | 'question' | 'reveal' | 'finished';
+    phase: 'waiting' | 'intro' | 'question' | 'reveal' | 'finished';
     questions: Question[];
     current: number;
     questionStartedAt: number;
     questionEndsAt: number;
+    introEndsAt: number;
+    reveal: object | null;
     players: Map<string, PlayerState>;
     timer?: NodeJS.Timeout;
     idleTimer?: NodeJS.Timeout;
+    hostTimer?: NodeJS.Timeout;
     startedAt?: number;
 }

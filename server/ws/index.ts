@@ -5,9 +5,22 @@ import * as questionsRepo from '../repo/questions.ts';
 import type { Game, PlayerState } from '../models/game.ts';
 import { createLimiter } from '../lib/rateLimit.ts';
 import {
-    addPlayer, attachPlayer, closeGame, createGame, disconnectPlayer, games, hostRoom, hostedGame,
-    nextQuestion, playersRoom, publicPlayers, snapshot, startGame, submitAnswer,
+    addPlayer, attachHost, attachPlayer, detachHost, createGame, disconnectPlayer, games, hostRoom, hostSnapshot, hostedGame,
+    nextQuestion, playersRoom, publicPlayers, setResultSink, snapshot, startGame, submitAnswer,
 } from './game.ts';
+import * as gameResultsRepo from '../repo/gameResults.ts';
+
+setResultSink((game, stats) => {
+    gameResultsRepo.save({
+        ownerId: game.hostUserId,
+        quizId: game.quizId,
+        quizTitle: game.quizTitle,
+        pin: game.code,
+        startedAt: game.startedAt ?? Date.now(),
+        durationMs: stats.durationMs,
+        stats,
+    });
+});
 
 type Ack = (res: object) => void;
 
@@ -73,10 +86,22 @@ export function registerSocketHandlers(io: Server) {
             if (!questions.length) return ack({ ok: false, error: 'no_questions' });
 
             const game = createGame(socket.data.userId, quiz.title, questions);
-            game.hostSocketId = socket.id;
+            attachHost(game, socket.id);
             socket.data.code = game.code;
             socket.join([game.code, hostRoom(game)]);
             ack({ ok: true, code: game.code });
+        });
+
+        handle(socket, 'host:rejoin', ({ quizId }, ack) => {
+            if (!socket.data.userId) return ack({ ok: false, error: 'unauthorized' });
+            if (currentGame()) return ack({ ok: false, error: 'already_in_game' });
+            const game = hostedGame(socket.data.userId);
+            if (!game || game.quizId !== Number(quizId)) return ack({ ok: false, error: 'not_found' });
+            const previous = attachHost(game, socket.id);
+            socket.data.code = game.code;
+            socket.join([game.code, hostRoom(game)]);
+            if (previous) io.sockets.sockets.get(previous)?.disconnect(true);
+            ack({ ok: true, state: hostSnapshot(game) });
         });
 
         handle(socket, 'host:start', (_payload, ack) => {
@@ -128,8 +153,7 @@ export function registerSocketHandlers(io: Server) {
                 const game = currentGame();
                 if (!game) return;
                 if (game.hostSocketId === socket.id) {
-                    game.hostSocketId = null;
-                    if (game.phase === 'waiting') closeGame(io, game, 'host_left');
+                    detachHost(io, game);
                     return;
                 }
                 const player = currentPlayer(game);

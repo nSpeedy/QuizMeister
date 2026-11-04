@@ -11,6 +11,7 @@ export interface Emitter {
 export type JoinError = 'wrong_phase' | 'invalid_name' | 'name_taken' | 'game_full';
 export type AnswerError = 'wrong_phase' | 'stale_question' | 'too_late' | 'already_answered' | 'invalid_option';
 
+export const INTRO_MS = 4000;
 export const REVEAL_MS = 5000;
 export const RECONNECT_GRACE_MS = 30_000;
 export const LEADERBOARD_SIZE = 10;
@@ -40,6 +41,7 @@ export function normalizeNick(raw: unknown): string | null {
 export function createGame(hostUserId: number, quizTitle: string, questions: Question[]): Game {
     const game: Game = {
         code: newCode(),
+        quizId: questions[0]?.quizId ?? 0,
         quizTitle,
         hostUserId,
         hostSocketId: null,
@@ -48,6 +50,8 @@ export function createGame(hostUserId: number, quizTitle: string, questions: Que
         current: -1,
         questionStartedAt: 0,
         questionEndsAt: 0,
+        introEndsAt: 0,
+        reveal: null,
         players: new Map(),
     };
     games.set(game.code, game);
@@ -112,7 +116,18 @@ function rankPlayers(game: Game) {
 export function startGame(io: Emitter, game: Game) {
     game.startedAt = Date.now();
     game.current = 0;
-    startQuestion(io, game);
+    startIntro(io, game);
+}
+
+function startIntro(io: Emitter, game: Game) {
+    clearTimeout(game.timer);
+    const q = game.questions[game.current];
+    game.phase = 'intro';
+    game.introEndsAt = Date.now() + INTRO_MS;
+    const base = { questionIndex: game.current, total: game.questions.length, introMs: INTRO_MS };
+    io.to(hostRoom(game)).emit('question:intro', { ...base, text: q.text });
+    io.to(playersRoom(game)).emit('question:intro', { ...base, text: q.text });
+    game.timer = setTimeout(() => startQuestion(io, game), INTRO_MS);
 }
 
 function startQuestion(io: Emitter, game: Game) {
@@ -125,7 +140,7 @@ function startQuestion(io: Emitter, game: Game) {
 
     const base = { questionIndex: game.current, total: game.questions.length, durationMs, endsAt: game.questionEndsAt };
     io.to(hostRoom(game)).emit('question:start', { ...base, text: q.text, options: q.options });
-    io.to(playersRoom(game)).emit('question:start', { ...base, optionCount: q.options.length });
+    io.to(playersRoom(game)).emit('question:start', { ...base, text: q.text, optionCount: q.options.length });
     game.timer = setTimeout(() => endQuestion(io, game), durationMs);
 }
 
@@ -174,12 +189,13 @@ export function endQuestion(io: Emitter, game: Game) {
     }
 
     const ranking = rankPlayers(game);
-    io.to(game.code).emit('question:end', {
+    game.reveal = {
         questionIndex: game.current,
         correctIndex: q.correctIndex,
         distribution,
         leaderboard: ranking.slice(0, LEADERBOARD_SIZE).map(({ player, rank }) => ({ id: player.id, name: player.name, score: player.score, rank })),
-    });
+    };
+    io.to(game.code).emit('question:end', game.reveal);
     for (const { player, rank } of ranking) {
         if (!player.socketId) continue;
         const answer = player.answers[game.current];
@@ -198,7 +214,7 @@ export function endQuestion(io: Emitter, game: Game) {
 export function nextQuestion(io: Emitter, game: Game) {
     if (game.phase !== 'reveal') return;
     game.current++;
-    if (game.current < game.questions.length) startQuestion(io, game);
+    if (game.current < game.questions.length) startIntro(io, game);
     else finishGame(io, game);
 }
 
@@ -222,6 +238,50 @@ export function disconnectPlayer(io: Emitter, game: Game, player: PlayerState, l
     if (game.phase === 'question' && everyoneAnswered(game)) endQuestion(io, game);
 }
 
+export function attachHost(game: Game, socketId: string): string | null {
+    const previous = game.hostSocketId;
+    clearTimeout(game.hostTimer);
+    game.hostSocketId = socketId;
+    return previous !== socketId ? previous : null;
+}
+
+export function detachHost(io: Emitter, game: Game) {
+    game.hostSocketId = null;
+    if (game.phase !== 'waiting') return;
+    clearTimeout(game.hostTimer);
+    game.hostTimer = setTimeout(() => {
+        if (games.has(game.code) && game.phase === 'waiting' && !game.hostSocketId) closeGame(io, game, 'host_left');
+    }, RECONNECT_GRACE_MS);
+}
+
+export function hostSnapshot(game: Game) {
+    const q = game.questions[game.current];
+    const live = game.phase === 'question' || game.phase === 'reveal';
+    const connected = connectedPlayers(game);
+    return {
+        code: game.code,
+        phase: game.phase,
+        players: publicPlayers(game),
+        intro: game.phase === 'intro'
+            ? { questionIndex: game.current, total: game.questions.length, introMs: Math.max(0, game.introEndsAt - Date.now()), text: q.text }
+            : null,
+        question: live
+            ? {
+                questionIndex: game.current,
+                total: game.questions.length,
+                durationMs: q.timeLimitS * 1000,
+                endsAt: game.questionEndsAt,
+                remainingMs: Math.max(0, game.questionEndsAt - Date.now()),
+                text: q.text,
+                options: q.options,
+            }
+            : null,
+        answered: connected.filter((p) => p.answers[game.current]).length,
+        answerTotal: connected.length,
+        reveal: game.phase === 'reveal' ? game.reveal : null,
+    };
+}
+
 export function snapshot(game: Game, player: PlayerState) {
     const q = game.phase === 'question' ? game.questions[game.current] : undefined;
     return {
@@ -230,6 +290,7 @@ export function snapshot(game: Game, player: PlayerState) {
         questionIndex: game.current,
         total: game.questions.length,
         question: q && {
+            text: q.text,
             optionCount: q.options.length,
             durationMs: q.timeLimitS * 1000,
             remainingMs: Math.max(0, game.questionEndsAt - Date.now()),
@@ -256,6 +317,7 @@ export function buildStats(game: Game) {
             accuracy: total ? correct / total : 0,
             avgResponseMs: given.length ? Math.round(given.reduce((sum, a) => sum + a.responseMs, 0) / given.length) : null,
             bestStreak: p.bestStreak,
+            answers: game.questions.map((_, i) => p.answers[i] ?? null),
         };
     });
 
@@ -284,14 +346,30 @@ export function buildStats(game: Game) {
 function dispose(io: Emitter, game: Game) {
     clearTimeout(game.timer);
     clearTimeout(game.idleTimer);
+    clearTimeout(game.hostTimer);
     for (const p of game.players.values()) clearTimeout(p.removeTimer);
     game.phase = 'finished';
     io.in(game.code).socketsLeave([game.code, hostRoom(game), playersRoom(game)]);
     games.delete(game.code);
 }
 
+export type GameStats = ReturnType<typeof buildStats>;
+type ResultSink = (game: Game, stats: GameStats) => void;
+
+let resultSink: ResultSink = () => {};
+
+export function setResultSink(sink: ResultSink) {
+    resultSink = sink;
+}
+
 export function finishGame(io: Emitter, game: Game) {
-    io.to(game.code).emit('game:over', buildStats(game));
+    const stats = buildStats(game);
+    try {
+        resultSink(game, stats);
+    } catch (err) {
+        console.error('[game] saving result failed', err);
+    }
+    io.to(game.code).emit('game:over', stats);
     dispose(io, game);
 }
 

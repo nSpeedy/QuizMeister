@@ -2,19 +2,25 @@ import { useEffect, useState, type FormEvent } from 'react';
 import { useSocket } from '@/lib/socket';
 import { ANSWER_STYLES, gameError } from '@/lib/game';
 import { clearSession, loadSession, saveSession, type PlayerSession } from '@/lib/playerSession';
-import type { AckResponse, GameStats, PlayerQuestion, PlayerStats, QuestionEnd, QuestionResult, Snapshot } from '@/models/Game';
+import type {
+    AckResponse, GameStats, PlayerQuestion, PlayerStats, QuestionEnd, QuestionIntroData, QuestionResult, Snapshot,
+} from '@/models/Game';
+import QuestionIntro from '@/components/game/QuestionIntro';
 import AnswerTile from '@/components/game/AnswerTile';
 import Countdown from '@/components/game/Countdown';
+import PlayerSummary from '@/components/game/PlayerSummary';
 
 interface PlayerState {
-    phase: 'connecting' | 'join' | 'waiting' | 'question' | 'answered' | 'result' | 'over' | 'closed';
+    phase: 'connecting' | 'join' | 'waiting' | 'intro' | 'question' | 'answered' | 'result' | 'over' | 'closed';
     me: PlayerSession | null;
+    intro: QuestionIntroData | null;
     question: PlayerQuestion | null;
     deadline: number;
     chosen: number | null;
     correctIndex: number | null;
     result: QuestionResult | null;
     final: PlayerStats | null;
+    stats: GameStats | null;
     totalQuestions: number;
     notice: string | null;
 }
@@ -22,12 +28,14 @@ interface PlayerState {
 const INITIAL: PlayerState = {
     phase: 'join',
     me: null,
+    intro: null,
     question: null,
     deadline: 0,
     chosen: null,
     correctIndex: null,
     result: null,
     final: null,
+    stats: null,
     totalQuestions: 0,
     notice: null,
 };
@@ -56,6 +64,9 @@ function Lobby() {
                 const snap = res.state;
                 const base = { me: session, totalQuestions: snap.total, notice: null };
                 if (snap.phase === 'waiting') return update({ ...base, phase: 'waiting' });
+                if (snap.phase === 'intro') {
+                    return update({ ...base, phase: 'intro', intro: { questionIndex: snap.questionIndex, total: snap.total, introMs: 0 } });
+                }
                 if (snap.phase === 'question' && snap.question && !snap.you.answered) {
                     return update({
                         ...base,
@@ -74,6 +85,15 @@ function Lobby() {
                 update({ ...base, phase: 'answered', chosen: null });
             },
             disconnect: () => setOnline(false),
+            'question:intro': (intro: QuestionIntroData) => update({
+                phase: 'intro',
+                intro,
+                totalQuestions: intro.total,
+                chosen: null,
+                correctIndex: null,
+                result: null,
+                notice: null,
+            }),
             'question:start': (question: PlayerQuestion) => update({
                 phase: 'question',
                 question,
@@ -88,7 +108,12 @@ function Lobby() {
             'question:result': (result: QuestionResult) => update({ phase: 'result', result }),
             'game:over': (stats: GameStats) => {
                 clearSession();
-                setState((s) => ({ ...s, phase: 'over', final: stats.players.find((p) => p.id === s.me?.playerId) ?? null }));
+                setState((s) => ({
+                    ...s,
+                    phase: 'over',
+                    stats,
+                    final: stats.players.find((p) => p.id === s.me?.playerId) ?? null,
+                }));
             },
             'game:closed': () => {
                 clearSession();
@@ -185,6 +210,8 @@ function Lobby() {
                 </div>
             )}
 
+            {phase === 'intro' && state.intro && <QuestionIntro key={state.intro.questionIndex} {...state.intro}/>}
+
             {phase === 'question' && question && (
                 <>
                     <p className="text-center text-body-secondary mb-2">Question {question.questionIndex + 1} of {question.total}</p>
@@ -233,17 +260,15 @@ function Lobby() {
             )}
 
             {phase === 'over' && (
-                <div className="text-center py-4">
-                    <h1 className="h2 mb-3">Game over</h1>
-                    {state.final ? (
-                        <>
-                            <div className="result-icon mb-2">#{state.final.rank}</div>
-                            <p className="fs-4 fw-bold">{state.final.score} points</p>
-                            <p className="text-body-secondary">
-                                {state.final.correct} of {state.totalQuestions} correct · best streak {state.final.bestStreak}
-                            </p>
-                        </>
-                    ) : <p className="text-body-secondary">Thanks for playing!</p>}
+                <div className="text-center">
+                    {state.final && state.stats ? (
+                        <PlayerSummary me={state.final} stats={state.stats}/>
+                    ) : (
+                        <div className="py-4">
+                            <h1 className="h2 mb-3">Game over</h1>
+                            <p className="text-body-secondary">Thanks for playing!</p>
+                        </div>
+                    )}
                     <button className="btn btn-primary mt-3" onClick={() => setState(INITIAL)}>Play again</button>
                 </div>
             )}

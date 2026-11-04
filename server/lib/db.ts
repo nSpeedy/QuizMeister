@@ -49,6 +49,21 @@ const migrations: string[] = [
             expires_at INTEGER NOT NULL
         ) STRICT;
     `,
+    `
+        CREATE TABLE game_results
+        (
+            id           INTEGER PRIMARY KEY,
+            owner_id     INTEGER NOT NULL REFERENCES users (id) ON DELETE CASCADE,
+            quiz_id      INTEGER REFERENCES quizzes (id) ON DELETE SET NULL,
+            quiz_title   TEXT    NOT NULL,
+            pin          TEXT    NOT NULL,
+            started_at   INTEGER NOT NULL,
+            duration_ms  INTEGER NOT NULL,
+            player_count INTEGER NOT NULL,
+            stats        TEXT    NOT NULL CHECK (json_valid(stats))
+        ) STRICT;
+        CREATE INDEX idx_game_results_owner ON game_results (owner_id, started_at DESC);
+    `,
 ];
 
 const current = db.pragma('user_version', { simple: true }) as number;

@@ -6,7 +6,8 @@ import { getQuiz } from '@/lib/api/quizzes';
 import { ApiError } from '@/lib/api';
 import { useSocket } from '@/lib/socket';
 import { gameError } from '@/lib/game';
-import type { AckResponse, GameStats, HostQuestion, LobbyPlayer, QuestionEnd } from '@/models/Game';
+import type { AckResponse, GameStats, HostQuestion, HostSnapshot, LobbyPlayer, QuestionEnd, QuestionIntroData } from '@/models/Game';
+import QuestionIntro from '@/components/game/QuestionIntro';
 import AnswerTile from '@/components/game/AnswerTile';
 import Countdown from '@/components/game/Countdown';
 import Leaderboard from '@/components/game/Leaderboard';
@@ -23,9 +24,10 @@ export async function clientLoader({ request, params }: Route.ClientLoaderArgs) 
 }
 
 interface HostState {
-    phase: 'connecting' | 'lobby' | 'question' | 'reveal' | 'over' | 'error';
+    phase: 'connecting' | 'lobby' | 'intro' | 'question' | 'reveal' | 'over' | 'error';
     code: string | null;
     players: LobbyPlayer[];
+    intro: QuestionIntroData | null;
     question: HostQuestion | null;
     deadline: number;
     answered: number;
@@ -39,6 +41,7 @@ const INITIAL: HostState = {
     phase: 'connecting',
     code: null,
     players: [],
+    intro: null,
     question: null,
     deadline: 0,
     answered: 0,
@@ -62,13 +65,31 @@ function HostGame({ loaderData }: Route.ComponentProps) {
 
         const handlers = {
             connect: async () => {
-                if (codeRef.current) return fail('Connection to the server was lost and the game was interrupted.');
+                const rejoin: AckResponse<{ state: HostSnapshot }> = await socket.emitWithAck('host:rejoin', { quizId: quiz.id });
+                if (rejoin.ok) {
+                    const { state: snap } = rejoin;
+                    codeRef.current = snap.code;
+                    return update({
+                        phase: snap.phase === 'waiting' ? 'lobby' : snap.phase === 'finished' ? 'over' : snap.phase,
+                        code: snap.code,
+                        players: snap.players,
+                        intro: snap.intro,
+                        question: snap.question,
+                        deadline: Date.now() + (snap.question?.remainingMs ?? 0),
+                        answered: snap.answered,
+                        answerTotal: snap.answerTotal,
+                        reveal: snap.reveal,
+                    });
+                }
+                if (rejoin.error !== 'not_found') return fail(gameError(rejoin.error));
+                if (codeRef.current) return fail('The game no longer exists on the server.');
                 const res: AckResponse<{ code: string }> = await socket.emitWithAck('host:create', { quizId: quiz.id });
                 if (!res.ok) return fail(gameError(res.error));
                 codeRef.current = res.code;
                 update({ phase: 'lobby', code: res.code });
             },
             'lobby:update': (players: LobbyPlayer[]) => update({ players }),
+            'question:intro': (intro: QuestionIntroData) => update({ phase: 'intro', intro, reveal: null }),
             'question:start': (question: HostQuestion) => setState((s) => ({
                 ...s,
                 phase: 'question',
@@ -134,6 +155,8 @@ function HostGame({ loaderData }: Route.ComponentProps) {
                             disabled={busy || connectedPlayers.length === 0}>Start game</button>
                 </div>
             )}
+
+            {phase === 'intro' && state.intro && <QuestionIntro key={state.intro.questionIndex} {...state.intro}/>}
 
             {(phase === 'question' || phase === 'reveal') && question && (
                 <>

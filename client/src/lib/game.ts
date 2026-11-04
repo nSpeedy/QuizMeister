@@ -24,3 +24,10 @@ const ERRORS: Record<string, string> = {
 export function gameError(code: string): string {
     return ERRORS[code] ?? 'Something went wrong. Try again.';
 }
+
+export function formatDuration(ms: number): string {
+    const totalSeconds = Math.round(ms / 1000);
+    const minutes = Math.floor(totalSeconds / 60);
+    const seconds = totalSeconds % 60;
+    return minutes ? `${minutes} min ${seconds} s` : `${seconds} s`;
+}
