@@ -1,0 +1,21 @@
+services:
+  server:
+    build: ./server
+    restart: unless-stopped
+    environment:
+      TRUST_PROXY: "true"
+      COOKIE_SECURE: ${COOKIE_SECURE:-false}
+    volumes:
+      - quiz-data:/data
+
+  client:
+    build: ./client
+    restart: unless-stopped
+    depends_on:
+      server:
+        condition: service_healthy
+    ports:
+      - "${WEB_PORT:-8080}:80"
+
+volumes:
+  quiz-data:

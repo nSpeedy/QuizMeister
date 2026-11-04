@@ -9,7 +9,7 @@ const router = Router();
 const COOKIE_OPTS = {
     httpOnly: true,
     sameSite: 'lax',
-    secure: process.env.NODE_ENV === 'production',
+    secure: (process.env.COOKIE_SECURE ?? String(process.env.NODE_ENV === 'production')) === 'true',
     path: '/',
 } as const;
 

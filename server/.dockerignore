@@ -1,0 +1,10 @@
+node_modules
+data
+tests
+.env
+.env.*
+!.env.example
+*.db
+*.db-wal
+*.db-shm
+Dockerfile

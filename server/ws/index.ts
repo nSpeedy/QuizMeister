@@ -43,7 +43,8 @@ export function registerSocketHandlers(io: Server) {
     });
 
     io.on('connection', (socket) => {
-        const ip = socket.handshake.address;
+        const forwarded = String(socket.handshake.headers['x-forwarded-for'] ?? '').split(',').at(-1)?.trim();
+        const ip = process.env.TRUST_PROXY === 'true' && forwarded ? forwarded : socket.handshake.address;
         const currentGame = (): Game | undefined => games.get(socket.data.code);
         const currentPlayer = (game: Game): PlayerState | undefined => game.players.get(socket.data.token);
 

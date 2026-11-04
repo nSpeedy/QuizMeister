@@ -6,6 +6,7 @@ import {registerSocketHandlers} from "./ws/index.ts";
 import * as usersRepo from './repo/users.ts';
 const app: Express = express();
 const port = process.env.PORT || 8080;
+if (process.env.TRUST_PROXY === 'true') app.set('trust proxy', 1);
 app.use(express.json());
 app.use(cookieParser());
 app.use('/api/v1', router);
